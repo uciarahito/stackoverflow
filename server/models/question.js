@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 const answerSchema = require('./answer')
+const voteSchema = require('./vote')
 
 var questionSchema = new Schema({
     title: String,
@@ -9,16 +10,13 @@ var questionSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User'
     },
-    answer: [answerSchema],
-    upvote: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    downvote: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
+    answers: [answerSchema],
+    votes: [voteSchema],
     created_at: {
+        type: Date,
+        default: Date.now
+    },
+    updated_at: {
         type: Date,
         default: Date.now
     }

@@ -40,9 +40,8 @@ methods.insertOne = (req, res) => {
         title: req.body.title,
         content: req.body.content,
         ask_by: question,
-        answer: [],
-        upvote: [],
-        downvote: []
+        answers: [],
+        votes: []
     })
     newQuestion.save((err, record) => {
         if (err) {
@@ -116,7 +115,7 @@ methods.createAnswer = (req, res) => {
     question = decoded._id
     Question.findByIdAndUpdate(req.params.id, {
             $push: {
-                answer: {
+                answers: {
                     answer_by: answer,
                     content: req.body.content
                 }
@@ -153,24 +152,126 @@ methods.getAllAnswer = (req, res) => {
                 err
             })
         }
-        console.log(record.answer);
-        res.json(record.answer)
+        console.log(record.answers);
+        res.json(record.answers)
     })
 }
 
-methods.getAnwerDetail = (req, res) => {
+methods.getAnswerDetail = (req, res) => {
     Question.findById(req.params.id)
-        .populate('answer')
-        .then((record) => {
+        .populate('answers')
+        .then(record => {
             // console.log(record);
             // res.json(record)
-            let dataBaru = record.answer.filter(newData => {
+            let dataBaru = record.answers.filter(newData => {
                 if (newData._id == req.params.anwserid) {
                     return newData
                 }
             })
             res.send(dataBaru)
 
+        })
+}
+
+methods.voteToQuestion = (req, res) => {
+    let decoded = Helpers.decodeToken(req.headers.token)
+    Question.findById(req.params.id)
+        .exec((err, record) => {
+            if (err) {
+                res.json({
+                    err
+                })
+            } else {
+                let exist = record.votes.some(val => {
+                    return val.vote_by == decoded._id
+                })
+
+                if (exist) {
+                    res.json({
+                        check_vote: false,
+                        message: "You have already voted"
+                    })
+                } else {
+                    Question.findByIdAndUpdate(
+                            record.id, {
+                                $push: {
+                                    votes: {
+                                        voted_by: decoded._id,
+                                        vote: req.body.vote
+                                    }
+                                }
+                            }, {
+                                new: true // biar data yg ditampilkan data yg terupdate
+                            })
+                        .exec(err => {
+                            res.json({
+                                check_vote: err == null ? true : false
+                            })
+                        })
+                }
+            }
+        })
+}
+
+methods.voteToAnswer = (req, res) => {
+    let decoded = Helpers.decodeToken(req.headers.token)
+    Question.findById(req.params.id)
+        .exec((err, record) => {
+            if (err) {
+                res.json({
+                    err
+                })
+            } else {
+                let index = record.answers.findIndex(val => val.id == req.params.answerid)
+                // console.log(record.answers);
+                // console.log(index);
+                let exist = record.answers[index].votes.some(val => {
+                    val.vote_by == decoded._id
+                })
+                // console.log(exist);
+
+                if (exist) {
+                    res.json({
+                        check_vote: false,
+                        message: "You have already voted"
+                    })
+                } else {
+                    Question.findOneAndUpdate({
+                            '_id': record.id,
+                            'answers._id': req.params.answerid
+                        }, {
+                            $push: {
+                                'answers.$.votes': {
+                                    voted_by: decoded._id,
+                                    vote: req.body.vote
+                                }
+                            }
+                        }, {
+                            new: true // biar data yg ditampilkan data yg terupdate
+                        })
+                        .exec(err => {
+                            console.log(req.body.vote);
+                            res.json({
+                                check_vote: err == null ? true : false
+                            })
+                        })
+                }
+            }
+        })
+}
+
+methods.deleteAnswer = (req, res) => {
+    Question.findById(req.params.id)
+        .populate('answers')
+        .then(record => {
+            let data = record.answers.filter(dataDelete => {
+                dataDelete._id == req.params.answerid
+                return indexOf(dataDelete._id)
+                // if (dataDelete._id == req.params.answerid) {
+                //     return dataDelete.splice(0, 1)
+                // }
+            })
+            res.send(data)
         })
 }
 

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema
+const voteSchema = require('./vote')
 
 var answerSchema = new Schema({
     answer_by: {
@@ -11,14 +12,15 @@ var answerSchema = new Schema({
         type: String,
         required: true
     },
-    upvote: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    downvote: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }]
+    votes: [voteSchema],
+    created_at: {
+        type: Date,
+        default: Date.now
+    },
+    updated_at: {
+        type: Date,
+        default: Date.now
+    }
 })
 
 module.exports = answerSchema
