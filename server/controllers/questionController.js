@@ -4,29 +4,46 @@ const Helpers = require('../helpers/decodeToken')
 var methods = {}
 
 methods.getAll = (req, res) => {
-    Question.find({}, (err, records) => {
-        if (err) {
-            console.log(err);
-            res.json({
-                err
-            })
-        }
-        console.log(records);
-        res.json(records)
-    })
+    Question.find({})
+        .populate('ask_by votes.vote_by answers.answer_by answers.votes.vote_by', 'username')
+        .exec((err, records) => {
+            if (err) {
+                res.json({
+                    err,
+                    message: 'Error waktu getAll'
+                })
+            } else {
+                res.json(records)
+            }
+        })
 }
 
+// methods.getAll = (req, res) => {
+//     Question.find({}, (err, records) => {
+//         if (err) {
+//             console.log(err);
+//             res.json({
+//                 err
+//             })
+//         }
+//         console.log(records);
+//         res.json(records)
+//     })
+// }
+
 methods.getById = (req, res) => {
-    Question.findById(req.params.id, (err, record) => {
-        if (err) {
-            console.log(err);
-            res.json({
-                err
-            })
-        }
-        console.log(records);
-        res.json(records)
-    })
+    Question.findById(req.params.id)
+        .populate('ask_by votes.vote_by answers.answer_by answers.votes.vote_by', 'username')
+        .exec((err, record) => {
+            if (err) {
+                console.log(err);
+                res.json({
+                    err
+                })
+            }
+            console.log(record);
+            res.json(record)
+        })
 }
 
 methods.insertOne = (req, res) => {
@@ -112,11 +129,11 @@ methods.createAnswer = (req, res) => {
     let decoded = Helpers.decodeToken(req.headers.token)
     // console.log(decoded);
     let answer = req.body.answer_by
-    question = decoded._id
+    answer = decoded._id
     Question.findByIdAndUpdate(req.params.id, {
             $push: {
                 answers: {
-                    answer_by: answer,
+                    answer_by: decoded._id,
                     content: req.body.content
                 }
             }
@@ -146,15 +163,20 @@ methods.createAnswer = (req, res) => {
 // }
 
 methods.getAllAnswer = (req, res) => {
-    Question.findById(req.params.id, (err, record) => {
-        if (err) {
-            res.json({
-                err
-            })
-        }
-        console.log(record.answers);
-        res.json(record.answers)
-    })
+    Question.findById(req.params.id)
+        .populate('answers.answer_by votes.vote_by', 'username')
+        .exec((err, record) => {
+            if (err) {
+                res.json({
+                    err,
+                    message: 'Error waktu getAllAnswer'
+                })
+            } else {
+                if (record.answers.length > 0) {
+                    res.json(record.answers)
+                }
+            }
+        })
 }
 
 methods.getAnswerDetail = (req, res) => {
@@ -175,6 +197,7 @@ methods.getAnswerDetail = (req, res) => {
 
 methods.voteToQuestion = (req, res) => {
     let decoded = Helpers.decodeToken(req.headers.token)
+    req.body.vote_by = decoded._id
     Question.findById(req.params.id)
         .exec((err, record) => {
             if (err) {
@@ -182,9 +205,9 @@ methods.voteToQuestion = (req, res) => {
                     err
                 })
             } else {
-                let exist = record.votes.some(val => {
-                    return val.vote_by == decoded._id
-                })
+                // console.log('id user: ' + decoded._id);
+                // console.log('id vote: ' + record.votes[0]._id);
+                let exist = record.votes.some(val => val.vote_by == decoded._id)
 
                 if (exist) {
                     res.json({
@@ -196,7 +219,7 @@ methods.voteToQuestion = (req, res) => {
                             record.id, {
                                 $push: {
                                     votes: {
-                                        voted_by: decoded._id,
+                                        vote_by: decoded._id,
                                         vote: req.body.vote
                                     }
                                 }
@@ -217,19 +240,11 @@ methods.voteToAnswer = (req, res) => {
     let decoded = Helpers.decodeToken(req.headers.token)
     Question.findById(req.params.id)
         .exec((err, record) => {
-            if (err) {
-                res.json({
-                    err
-                })
-            } else {
+            if (err)
+                res.send(err)
+            else {
                 let index = record.answers.findIndex(val => val.id == req.params.answerid)
-                // console.log(record.answers);
-                // console.log(index);
-                let exist = record.answers[index].votes.some(val => {
-                    val.vote_by == decoded._id
-                })
-                // console.log(exist);
-
+                let exist = record.answers[index].votes.some(val => val.vote_by == decoded._id)
                 if (exist) {
                     res.json({
                         check_vote: false,
@@ -242,25 +257,37 @@ methods.voteToAnswer = (req, res) => {
                         }, {
                             $push: {
                                 'answers.$.votes': {
-                                    voted_by: decoded._id,
+                                    vote_by: decoded._id,
                                     vote: req.body.vote
                                 }
                             }
                         }, {
-                            new: true // biar data yg ditampilkan data yg terupdate
+                            new: true
                         })
-                        .exec(err => {
-                            console.log(req.body.vote);
+                        .exec((err) => {
                             res.json({
                                 check_vote: err == null ? true : false
                             })
                         })
-                }
-            }
-        })
+                } // end if
+            } // end if
+        }) // end exec
 }
 
 methods.deleteAnswer = (req, res) => {
+    // Question.findByIdAndRemove(req.params.id)
+    //       .populate('answers')
+    //       .exec((err, record) => {
+    //           if (err) {
+    //               res.json({
+    //                   err,
+    //                   message: 'Error waktu deleteById'
+    //               })
+    //           } else {
+    //               res.json(record.)
+    //           }
+    //       })
+
     Question.findById(req.params.id)
         .populate('answers')
         .then(record => {
@@ -273,6 +300,7 @@ methods.deleteAnswer = (req, res) => {
             })
             res.send(data)
         })
+
 }
 
 module.exports = methods

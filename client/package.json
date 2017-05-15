@@ -5,13 +5,21 @@
   "author": "",
   "private": true,
   "scripts": {
-    "dev": "node build/dev-server.js",
+    "dev": "nodemon build/dev-server.js",
     "start": "node build/dev-server.js",
     "build": "node build/build.js"
   },
   "dependencies": {
+    "axios": "^0.16.1",
+    "dotenv": "^4.0.0",
+    "jquery": "^3.2.1",
+    "toastr": "^2.1.2",
     "vue": "^2.2.6",
-    "vue-router": "^2.3.1"
+    "vue-axios": "^2.0.2",
+    "vue-material": "^0.7.1",
+    "vue-resource": "^1.3.1",
+    "vue-router": "^2.3.1",
+    "vue-style-loader": "^2.0.5"
   },
   "devDependencies": {
     "autoprefixer": "^6.7.2",
